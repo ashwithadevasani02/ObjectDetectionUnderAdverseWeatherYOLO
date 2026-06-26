@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import UploadZone from './components/UploadZone';
 import DetectionList from './components/DetectionList';
 import { Loader2, ShieldCheck, AlertCircle, ImageIcon, Eye, Play } from 'lucide-react';
-const API_BASE = 'http://localhost:4000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000/api';
 export default function App() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
