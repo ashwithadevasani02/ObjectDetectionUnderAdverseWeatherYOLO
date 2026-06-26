@@ -14,7 +14,8 @@ app.use('/api', predictRouter);
 app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
-    pythonServiceReady: pythonService.isReady
+    pythonServiceReady: pythonService.isReady,
+    pythonLogs: pythonService.getStartupLogs()
   });
 });
 app.use((err, req, res, next) => {
