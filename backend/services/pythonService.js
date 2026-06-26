@@ -12,7 +12,7 @@ class PythonInferenceService {
   }
   initProcess() {
     const pythonScript = path.join(__dirname, '../python/inference.py');
-    const pythonPath = process.env.PYTHON_PATH || 'python';
+    const pythonPath = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3');
     console.log(`[Python Service] Launching Python process: "${pythonPath}" "${pythonScript}"`);
     this.pyProcess = spawn(pythonPath, [pythonScript])
     let stdoutBuffer = '';
