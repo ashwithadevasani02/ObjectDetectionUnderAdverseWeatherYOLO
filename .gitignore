@@ -17,10 +17,8 @@ Thumbs.db
 desktop.ini
 
 # Machine Learning Binaries & Models
-*.pt
 *.pth
 *.onnx
-backend/python/rrp32.pt
 
 # Log files
 *.log
