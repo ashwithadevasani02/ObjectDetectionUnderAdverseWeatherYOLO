@@ -1,13 +1,28 @@
 import sys
 import os
+import gc
 import json
 import base64
 import traceback
-os.environ["YOLO_VERBOSE"] = "False"
+
+# Keep memory footprint low on constrained instances (e.g. Render free tier).
+# These must be set before NumPy / OpenCV / PyTorch are imported so their native
+# backends honor the limits instead of allocating per-core thread pools.
+os.environ.setdefault("YOLO_VERBOSE", "False")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
+os.environ.setdefault("MPLBACKEND", "Agg")
 print("STARTING", flush=True)
 try:
     import cv2
+    import torch
     from ultralytics import YOLO
+    cv2.setNumThreads(1)
+    torch.set_num_threads(1)
+    torch.set_grad_enabled(False)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(script_dir, "rrp32.pt")
     model = YOLO(model_path)
@@ -26,7 +41,7 @@ for line in sys.stdin:
         if not os.path.exists(image_path):
             print(json.dumps({"error": f"Image file not found: {image_path}"}), flush=True)
             continue
-        results = model(image_path)
+        results = model.predict(image_path, verbose=False)
         annotated_bgr = results[0].plot()
         success_encode, encoded_image = cv2.imencode('.jpg', annotated_bgr)
         if not success_encode:
@@ -48,6 +63,8 @@ for line in sys.stdin:
             "detections": detections
         }
         print(json.dumps(response), flush=True)
-        
+        del results, annotated_bgr, encoded_image
+        gc.collect()
+
     except Exception as e:
         print(json.dumps({"error": f"Inference error: {str(e)}", "trace": traceback.format_exc()}), flush=True)
