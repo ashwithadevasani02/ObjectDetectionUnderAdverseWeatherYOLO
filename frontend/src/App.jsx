@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import UploadZone from './components/UploadZone';
 import DetectionList from './components/DetectionList';
 import { Loader2, ShieldCheck, AlertCircle, ImageIcon, Eye, Play } from 'lucide-react';
-
 const API_BASE = 'http://localhost:4000/api';
-
 export default function App() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -31,13 +29,10 @@ export default function App() {
 
   const handleDetect = async () => {
     if (!selectedFile) return;
-
     setIsLoading(true);
     setToast(null);
-
     const formData = new FormData();
     formData.append('image', selectedFile);
-
     try {
       const response = await fetch(`${API_BASE}/predict`, {
         method: 'POST',
@@ -50,7 +45,7 @@ export default function App() {
       }
 
       const data = await response.json();
-      
+
       if (data.error) {
         throw new Error(data.error);
       }
@@ -73,11 +68,10 @@ export default function App() {
       {/* Toast Notification */}
       {toast && (
         <div className="fixed top-5 right-5 z-50 animate-in slide-in-from-top duration-300">
-          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-md border ${
-            toast.type === 'success' 
-              ? 'bg-white border-emerald-100 text-emerald-800' 
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-md border ${toast.type === 'success'
+              ? 'bg-white border-emerald-100 text-emerald-800'
               : 'bg-white border-rose-100 text-rose-800'
-          }`}>
+            }`}>
             {toast.type === 'success' ? (
               <ShieldCheck className="w-5 h-5 text-emerald-500 shrink-0" />
             ) : (
@@ -89,7 +83,7 @@ export default function App() {
       )}
 
       <div className="max-w-5xl mx-auto flex flex-col gap-10">
-        
+
         {/* Header */}
         <header className="text-center">
           <span className="text-xs font-semibold tracking-wider text-blue-600 uppercase bg-blue-50 px-3 py-1.5 rounded-full inline-block mb-3">
@@ -121,10 +115,8 @@ export default function App() {
         {/* Workspace State (File Uploaded) */}
         {previewUrl && (
           <main className="flex flex-col gap-8 animate-in fade-in duration-300">
-            
             {/* Split Screen Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              
               {/* Left Card: Original Image */}
               <section className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -132,7 +124,7 @@ export default function App() {
                     <ImageIcon className="w-4 h-4 text-slate-400" />
                     <h2 className="text-sm font-semibold text-slate-700">Original Image</h2>
                   </div>
-                  <button 
+                  <button
                     onClick={handleClear}
                     disabled={isLoading}
                     className="text-xs text-slate-400 hover:text-slate-600 transition-colors font-medium disabled:opacity-50"
@@ -140,7 +132,7 @@ export default function App() {
                     Clear Image
                   </button>
                 </div>
-                
+
                 <div className="flex-1 bg-slate-50 flex items-center justify-center p-6 h-96 relative">
                   <img
                     src={previewUrl}

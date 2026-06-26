@@ -1,7 +1,6 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-
 class PythonInferenceService {
   constructor() {
     this.pyProcess = null;
@@ -11,28 +10,19 @@ class PythonInferenceService {
     this.currentResolver = null;
     this.initProcess();
   }
-
   initProcess() {
     const pythonScript = path.join(__dirname, '../python/inference.py');
-    // Allow custom python command via environment variable
     const pythonPath = process.env.PYTHON_PATH || 'python';
-
     console.log(`[Python Service] Launching Python process: "${pythonPath}" "${pythonScript}"`);
-    
-    // Spawn the python process
-    this.pyProcess = spawn(pythonPath, [pythonScript]);
-
+    this.pyProcess = spawn(pythonPath, [pythonScript])
     let stdoutBuffer = '';
     let stderrBuffer = '';
-
     this.pyProcess.stdout.on('data', (data) => {
       stdoutBuffer += data.toString();
-      
       let lineIndex;
       while ((lineIndex = stdoutBuffer.indexOf('\n')) !== -1) {
         const line = stdoutBuffer.substring(0, lineIndex).trim();
         stdoutBuffer = stdoutBuffer.substring(lineIndex + 1);
-
         if (line === 'READY') {
           console.log('[Python Service] Persistent process is READY and model is loaded.');
           this.isReady = true;
@@ -88,19 +78,15 @@ class PythonInferenceService {
   handleProcessCrash(error) {
     this.isReady = false;
     this.pyProcess = null;
-    
+
     if (this.currentResolver) {
       this.currentResolver.reject(error || new Error('Python process crashed during inference.'));
       this.currentResolver = null;
       this.isProcessing = false;
     }
-
-    // Reject all queued requests to prevent infinite waiting
     const activeQueue = this.queue;
     this.queue = [];
     activeQueue.forEach(({ reject }) => reject(new Error('Inference server was restarted. Please try again.')));
-
-    // Attempt to restart python process after a brief delay
     setTimeout(() => {
       if (!this.pyProcess) {
         console.log('[Python Service] Attempting to restart process...');
@@ -108,14 +94,12 @@ class PythonInferenceService {
       }
     }, 5000);
   }
-
   predict(imagePath) {
     return new Promise((resolve, reject) => {
       this.queue.push({ imagePath, resolve, reject });
       this.processQueue();
     });
   }
-
   processQueue() {
     if (this.isProcessing || !this.isReady || this.queue.length === 0) {
       return;

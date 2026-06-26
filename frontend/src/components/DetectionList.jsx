@@ -1,5 +1,4 @@
 import React from 'react';
-
 export default function DetectionList({ detections }) {
   if (!detections || detections.length === 0) {
     return (
@@ -8,16 +7,13 @@ export default function DetectionList({ detections }) {
       </div>
     );
   }
-
   // Sort detections by confidence descending
   const sortedDetections = [...detections].sort((a, b) => b.confidence - a.confidence);
-
   return (
     <div className="w-full">
       <div className="flex flex-wrap gap-2.5">
         {sortedDetections.map((det, index) => {
           const percentage = Math.round(det.confidence * 100);
-          
           return (
             <div
               key={`${det.class}-${index}`}
