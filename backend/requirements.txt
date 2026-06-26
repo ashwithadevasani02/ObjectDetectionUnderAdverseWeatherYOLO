@@ -1,3 +1,9 @@
+# Install the CPU-only PyTorch build. The default PyPI torch wheel bundles CUDA
+# libraries and uses far more memory (~770MB RSS vs ~495MB), which OOM-kills the
+# inference process on small CPU hosts (e.g. Render free tier, 512MB).
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
 ultralytics
 opencv-python-headless
 numpy

@@ -14,9 +14,11 @@ frontend/dist/
 # Runtime caches (matplotlib font cache, etc.)
 backend/.cache/
 
-# Python bytecode
+# Python bytecode & virtualenvs
 __pycache__/
 *.pyc
+.venv/
+venv/
 
 # OS specific files
 .DS_Store
