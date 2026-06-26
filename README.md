@@ -6,10 +6,10 @@ The system uses a persistent Python subprocess architecture to execute inference
 
 ---
 
-### <a id="project-overview"></a>Project Overview
+### Project Overview
 Adverse weather conditions like rain, fog, snow, and low light dramatically reduce the visibility of key objects in driving scenes, posing a severe challenge to standard computer vision models. This project utilizes a custom-trained **YOLO11s** model (referred to internally in the training notebook as **YOLO26s** with 260 layers and 9.4M parameters) that has been specifically fine-tuned using simulated and real adverse weather data. The accompanying application provides an intuitive user interface to upload input images, trigger inference, and visualize class-specific bounding boxes and confidence scores in real time.
 
-### <a id="key-features"></a>Key Features
+### Key Features
 * **Persistent Subprocess Bridge**: Node.js streams image file paths through `stdin` to a running Python process and parses JSON output from `stdout`, preventing expensive PyTorch load times on request threads.
 * **Calibrated Weather Augmentation**: Model trained on the **DAWN** dataset multiplied by **9.4x** through customized Albumentations transformations (rain, snow, glare, heavy fog, motion blur, night).
 * **Modern Web Interface**: Intuitive frontend layout built on React, Vite, and Tailwind CSS, featuring drag-and-drop file imports, side-by-side image comparison, and interactive confidence graphs.
@@ -17,11 +17,11 @@ Adverse weather conditions like rain, fog, snow, and low light dramatically redu
 
 ---
 
-## <a id="table-of-contents"></a>📋 Table of Contents
+## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
 - [Folder Structure](#folder-structure)
-- [Dataset & Model Architecture](#dataset-model-architecture)
+- [Dataset and Model Architecture](#dataset-and-model-architecture)
 - [Model Training](#model-training)
 - [System Requirements](#system-requirements)
 - [Setup Instructions](#setup-instructions)
@@ -30,19 +30,22 @@ Adverse weather conditions like rain, fog, snow, and low light dramatically redu
   - [3. Backend Setup](#3-backend-setup)
   - [4. Frontend Setup](#4-frontend-setup)
 - [API Documentation](#api-documentation)
-- [Results & Performance](#results-performance)
+- [Results and Performance](#results-and-performance)
 - [Future Improvements](#future-improvements)
-- [Troubleshooting & Support](#troubleshooting-support)
+- [Troubleshooting and Support](#troubleshooting-and-support)
 
 ---
 
-## <a id="architecture-overview"></a>🏗️ Architecture Overview
+## Architecture Overview
 
 ```mermaid
-graph TD
-    Client[React + Vite Frontend] <-->|HTTP POST /predict| Express[Express.js Server]
-    Express <-->|stdin file paths / stdout JSON results| Python[Persistent inference.py Subprocess]
-    Python <-->|Inference| YOLO[YOLO Model: rrp32.pt]
+flowchart TD
+    Client[React + Vite Frontend] -->|HTTP POST /predict| Express[Express.js Server]
+    Express -->|JSON Response| Client
+    Express -->|stdin: Image File Path| Python[Persistent inference.py Subprocess]
+    Python -->|stdout: Detections JSON| Express
+    Python -->|Image Input| YOLO[YOLO Model: rrp32.pt]
+    YOLO -->|Detections & Annotated Image| Python
 ```
 
 1. **Frontend**: React application bundled using Vite, styled with Tailwind CSS, and using Lucide icons.
@@ -54,7 +57,7 @@ graph TD
 
 ---
 
-## <a id="folder-structure"></a>📁 Folder Structure
+## Folder Structure
 
 The repository is divided into a Node/Express backend, a React frontend, and a root Jupyter notebook:
 
@@ -90,7 +93,7 @@ The repository is divided into a Node/Express backend, a React frontend, and a r
 
 ---
 
-## <a id="dataset-model-architecture"></a>📊 Dataset & Model Architecture
+## Dataset and Model Architecture
 
 ### DAWN Dataset
 The model was fine-tuned on the **DAWN (Detection in Adverse Weather Nature)** dataset. The dataset includes 1,000 real-world images representing severe weather impairments: fog, rain, snow, and sandstorms. 
@@ -120,7 +123,7 @@ The dataset classes were remapped from the Roboflow annotations (`nc=7`) to inde
 
 ---
 
-## <a id="model-training"></a>🧠 Model Training
+## Model Training
 
 The complete training pipeline is implemented in the [yolo_model_training.ipynb](file:///c:/Users/DELL/OneDrive/Desktop/project2/yolo_model_training.ipynb) notebook.
 
@@ -166,7 +169,7 @@ The model was fine-tuned on the augmented DAWN dataset with the following parame
 
 ---
 
-## <a id="system-requirements"></a>💻 System Requirements
+## System Requirements
 
 Ensure you have the following installed on your machine:
 - **Node.js** (v18 or higher)
@@ -175,7 +178,7 @@ Ensure you have the following installed on your machine:
 
 ---
 
-## <a id="setup-instructions"></a>🚀 Setup Instructions
+## Setup Instructions
 
 ### 1. Model Placement
 
@@ -221,7 +224,7 @@ npm run dev
 
 ---
 
-## <a id="api-documentation"></a>🔌 API Documentation
+## API Documentation
 
 ### **POST /api/predict**
 Accepts a single image upload and returns YOLO inference results.
@@ -265,7 +268,7 @@ Returns the status of the Express server and checking if the background YOLO dae
 
 ---
 
-## <a id="results-performance"></a>📈 Results & Performance
+## Results and Performance
 
 ### Validation Metrics
 After 50 epochs of training on the augmented adverse weather dataset, the model achieved the following performance metrics:
@@ -291,14 +294,14 @@ Evaluated on a Tesla T4 GPU:
 
 ---
 
-## <a id="future-improvements"></a>🔮 Future Improvements
+## Future Improvements
 * **Real-time Video Processing**: Implement WebSocket streaming to stream live adverse weather dashboard videos.
 * **Model Pruning**: Prune redundant neural paths to compress the model weights for edge microcontrollers.
 * **Model Quantization**: Quantize weights from FP32 to FP16 or INT8 to boost CPU execution speeds.
 
 ---
 
-## <a id="troubleshooting-support"></a>🔧 Troubleshooting & Support
+## Troubleshooting and Support
 
 - **Model is loading loop**: If you see a warning that the model is still loading, wait a few seconds. The persistent Python script takes around ~4-6 seconds to compile PyTorch, OpenCV, and load the 20MB `.pt` file.
 - **Port Conflict**: If port `4000` is already in use, you can configure a different port by editing `PORT` inside the [backend .env](file:///c:/Users/DELL/OneDrive/Desktop/project2/backend/.env) configuration file.
