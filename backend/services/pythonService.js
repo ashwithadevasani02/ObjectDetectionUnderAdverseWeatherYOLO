@@ -80,11 +80,12 @@ class PythonInferenceService {
       this.handleProcessCrash(err);
     });
 
-    this.pyProcess.on('close', (code) => {
-      if (code !== 0 && code !== null) {
-        console.warn(`[Python Service] Process exited with code ${code}`);
-        this.startupLogs.push(`[Close] Process exited with code ${code}`);
-        this.handleProcessCrash(new Error(`Python process exited with code ${code}`));
+    this.pyProcess.on('close', (code, signal) => {
+      if (code !== 0) {
+        const errorMsg = `Python process exited with code ${code}` + (signal ? ` (signal: ${signal})` : '');
+        console.warn(`[Python Service] ${errorMsg}`);
+        this.startupLogs.push(`[Close] ${errorMsg}`);
+        this.handleProcessCrash(new Error(errorMsg));
       }
     });
   }
@@ -130,7 +131,7 @@ class PythonInferenceService {
       this.isProcessing = false;
       this.currentResolver = null;
       reject(new Error(`Failed to write to Python process stdin: ${err.message}`));
-      this.processQueue();
+      this.handleProcessCrash(err);
     }
   }
   getStartupLogs() {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import UploadZone from './components/UploadZone';
 import DetectionList from './components/DetectionList';
 import { Loader2, ShieldCheck, AlertCircle, ImageIcon, Eye, Play } from 'lucide-react';
@@ -10,6 +10,45 @@ export default function App() {
   const [detections, setDetections] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  
+  // Model status states: 'checking' (initial), 'loading' (model not ready), 'ready' (loaded), 'offline' (server down)
+  const [modelStatus, setModelStatus] = useState('checking');
+  const [modelLogs, setModelLogs] = useState([]);
+
+  useEffect(() => {
+    const HEALTH_URL = API_BASE.replace(/\/api\/?$/, '') + '/health';
+    
+    const checkHealth = async () => {
+      try {
+        const response = await fetch(HEALTH_URL);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.pythonServiceReady) {
+            setModelStatus('ready');
+          } else {
+            setModelStatus('loading');
+            if (data.pythonLogs) {
+              setModelLogs(data.pythonLogs);
+            }
+          }
+        } else {
+          setModelStatus('offline');
+        }
+      } catch (err) {
+        console.error('[Health check connection failed]:', err);
+        setModelStatus('offline');
+      }
+    };
+
+    checkHealth();
+
+    // Poll status: fast interval (3s) when loading/offline/checking, slow interval (15s) when ready
+    const interval = setInterval(() => {
+      checkHealth();
+    }, modelStatus === 'ready' ? 15000 : 3000);
+
+    return () => clearInterval(interval);
+  }, [modelStatus]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -41,6 +80,9 @@ export default function App() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 503) {
+          setModelStatus('loading');
+        }
         throw new Error(errorData.error || 'Server error occurred during detection.');
       }
 
@@ -96,6 +138,45 @@ export default function App() {
             Upload an image to detect objects using our custom YOLO model, specially calibrated for rain, fog, and low-light environments.
           </p>
         </header>
+
+        {/* Model Status Indicator */}
+        <div className="flex flex-col items-center justify-center -mt-6 gap-2">
+          {modelStatus === 'offline' && (
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-rose-100 bg-rose-50 text-rose-800 text-xs font-semibold animate-pulse shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+              Backend Server Offline (Retrying...)
+            </div>
+          )}
+          {modelStatus === 'checking' && (
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-100 bg-slate-50 text-slate-600 text-xs font-semibold shadow-sm animate-pulse">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
+              Connecting to Service...
+            </div>
+          )}
+          {modelStatus === 'loading' && (
+            <div className="flex flex-col items-center gap-2.5 max-w-md w-full animate-in fade-in duration-300">
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-amber-100 bg-amber-50/70 text-amber-800 text-xs font-semibold shadow-sm">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+                YOLO Model Loading...
+              </div>
+              {modelLogs.length > 0 && (
+                <div className="w-full text-[10px] text-slate-400 font-mono bg-white border border-slate-200 rounded-lg p-2 max-h-24 overflow-y-auto select-none shadow-inner text-center">
+                  <span className="font-semibold text-slate-500 uppercase tracking-wider text-[9px] block mb-1">Inference Logs</span>
+                  {modelLogs[modelLogs.length - 1]}
+                </div>
+              )}
+            </div>
+          )}
+          {modelStatus === 'ready' && (
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-emerald-100 bg-emerald-50 text-emerald-800 text-xs font-semibold shadow-sm transition-all duration-300 animate-in fade-in duration-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-400 animate-pulse"></span>
+              YOLO Model Ready
+            </div>
+          )}
+        </div>
 
         {/* Upload State / Empty State */}
         {!previewUrl && (
@@ -167,7 +248,11 @@ export default function App() {
                     <div className="text-center text-slate-400 max-w-[240px]">
                       <Play className="w-6 h-6 mx-auto mb-2 text-slate-300" />
                       <p className="text-xs font-medium">Original image loaded.</p>
-                      <p className="text-[11px] text-slate-400 mt-1">Click the "Detect Objects" button below to run the YOLO model.</p>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        {modelStatus === 'ready' 
+                          ? 'Click the "Detect Objects" button below to run the YOLO model.'
+                          : 'YOLO model is loading. Please wait before running detection.'}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -180,9 +265,10 @@ export default function App() {
               {!annotatedImage && !isLoading && (
                 <button
                   onClick={handleDetect}
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-50"
+                  disabled={modelStatus !== 'ready'}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-60 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed disabled:shadow-none"
                 >
-                  Detect Objects
+                  {modelStatus === 'ready' ? 'Detect Objects' : 'Waiting for YOLO Model...'}
                 </button>
               )}
 
@@ -200,9 +286,10 @@ export default function App() {
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                   <button
                     onClick={handleDetect}
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    disabled={modelStatus !== 'ready'}
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-60 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed disabled:shadow-none"
                   >
-                    Run Detection Again
+                    {modelStatus === 'ready' ? 'Run Detection Again' : 'Waiting for YOLO Model...'}
                   </button>
                   <button
                     onClick={handleClear}
