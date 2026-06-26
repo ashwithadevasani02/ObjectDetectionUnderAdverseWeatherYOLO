@@ -4,6 +4,7 @@ import json
 import base64
 import traceback
 os.environ["YOLO_VERBOSE"] = "False"
+print("STARTING", flush=True)
 try:
     import cv2
     from ultralytics import YOLO

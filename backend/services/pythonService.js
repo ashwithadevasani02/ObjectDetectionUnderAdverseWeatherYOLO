@@ -14,7 +14,10 @@ class PythonInferenceService {
   }
   initProcess() {
     const pythonScript = path.join(__dirname, '../python/inference.py');
-    const pythonPath = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3');
+    let pythonPath = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3');
+    if (process.env.RENDER && pythonPath === 'python') {
+      pythonPath = 'python3';
+    }
     console.log(`[Python Service] Launching Python process: "${pythonPath}" "${pythonScript}"`);
     this.startupLogs.push(`[System] Launching Python process: "${pythonPath}" "${pythonScript}"`);
     
