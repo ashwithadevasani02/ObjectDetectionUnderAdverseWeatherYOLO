@@ -12,6 +12,33 @@ class PythonInferenceService {
     this.startupLogs = [];
     this.initProcess();
   }
+  buildChildEnv() {
+    // Persist matplotlib's font cache so it is built only once and survives
+    // child restarts (ultralytics imports matplotlib on startup).
+    const mplConfigDir = path.join(__dirname, '../.cache/matplotlib');
+    try {
+      fs.mkdirSync(mplConfigDir, { recursive: true });
+    } catch (err) {
+      console.warn(`[Python Service] Could not create MPLCONFIGDIR: ${err.message}`);
+    }
+
+    // Memory tuning for constrained instances (e.g. Render free tier, 512MB).
+    // MALLOC_ARENA_MAX must be set before the child starts so glibc honors it;
+    // it is the single biggest lever for reducing PyTorch/NumPy RSS. The thread
+    // limits avoid spawning per-core worker pools that inflate memory.
+    return {
+      ...process.env,
+      MALLOC_ARENA_MAX: process.env.MALLOC_ARENA_MAX || '2',
+      OMP_NUM_THREADS: process.env.OMP_NUM_THREADS || '1',
+      OPENBLAS_NUM_THREADS: process.env.OPENBLAS_NUM_THREADS || '1',
+      MKL_NUM_THREADS: process.env.MKL_NUM_THREADS || '1',
+      NUMEXPR_NUM_THREADS: process.env.NUMEXPR_NUM_THREADS || '1',
+      VECLIB_MAXIMUM_THREADS: process.env.VECLIB_MAXIMUM_THREADS || '1',
+      MPLBACKEND: process.env.MPLBACKEND || 'Agg',
+      MPLCONFIGDIR: process.env.MPLCONFIGDIR || mplConfigDir,
+      YOLO_VERBOSE: process.env.YOLO_VERBOSE || 'False'
+    };
+  }
   initProcess() {
     const pythonScript = path.join(__dirname, '../python/inference.py');
     let pythonPath = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3');
@@ -21,7 +48,7 @@ class PythonInferenceService {
     console.log(`[Python Service] Launching Python process: "${pythonPath}" "${pythonScript}"`);
     this.startupLogs.push(`[System] Launching Python process: "${pythonPath}" "${pythonScript}"`);
     
-    this.pyProcess = spawn(pythonPath, [pythonScript])
+    this.pyProcess = spawn(pythonPath, [pythonScript], { env: this.buildChildEnv() })
     let stdoutBuffer = '';
     let stderrBuffer = '';
     this.pyProcess.stdout.on('data', (data) => {

@@ -1,0 +1,33 @@
+# Render Blueprint for the Object Detection backend.
+# This documents a reproducible deploy and sets the memory-tuning env vars that
+# keep the PyTorch/YOLO inference process within tight RAM limits (Render free
+# tier = 512MB). Apply via Render -> Blueprints, or copy the env vars into an
+# existing service's Environment tab.
+services:
+  - type: web
+    name: yolo-weather-detection-backend
+    runtime: node
+    rootDir: backend
+    plan: free # NOTE: 512MB is borderline for PyTorch. Upgrade to >=2GB if it still OOMs.
+    buildCommand: npm install && pip install -r requirements.txt
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_PATH
+        value: python3
+      # Single biggest lever for reducing PyTorch/NumPy resident memory.
+      - key: MALLOC_ARENA_MAX
+        value: "2"
+      # Avoid per-core native thread pools that inflate memory on small instances.
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+      - key: NUMEXPR_NUM_THREADS
+        value: "1"
+      - key: VECLIB_MAXIMUM_THREADS
+        value: "1"
+      - key: MPLBACKEND
+        value: "Agg"

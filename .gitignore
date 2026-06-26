@@ -11,6 +11,15 @@ backend/.env.local
 # Compile/Build directories
 frontend/dist/
 
+# Runtime caches (matplotlib font cache, etc.)
+backend/.cache/
+
+# Python bytecode & virtualenvs
+__pycache__/
+*.pyc
+.venv/
+venv/
+
 # OS specific files
 .DS_Store
 Thumbs.db
