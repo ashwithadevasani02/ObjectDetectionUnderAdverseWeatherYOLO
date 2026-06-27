@@ -11,13 +11,16 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const predictRouter = require('./routes/predict');
 app.use('/api', predictRouter);
-app.get('/health', (req, res) => {
+const healthHandler = (req, res) => {
   res.json({
     status: 'healthy',
     pythonServiceReady: pythonService.isReady,
     pythonLogs: pythonService.getStartupLogs()
   });
-});
+};
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
+
 app.use((err, req, res, next) => {
   console.error('[Server Error]:', err);
   res.status(err.status || 500).json({
