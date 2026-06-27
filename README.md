@@ -38,19 +38,74 @@ Adverse weather conditions like rain, fog, snow, and low light dramatically redu
 
 ## Architecture Overview
 
-```mermaid
-flowchart TD
-    Client[React + Vite Frontend] -->|HTTP POST /predict| Express[Express.js Server]
-    Express -->|JSON Response| Client
-    Express -->|stdin: Image File Path| Python[Persistent inference.py Subprocess]
-    Python -->|stdout: Detections JSON| Express
-    Python -->|Image Input| YOLO[YOLO Model: rrp32.pt]
-    YOLO -->|Detections & Annotated Image| Python
-```
+In production, the application split-hosts the frontend and backend to stay within free-tier limits:
+1. **Frontend (Vercel)**: A React application bundled using Vite and styled with Tailwind CSS, utilizing `VITE_API_BASE` pointing to the Hugging Face Space endpoint.
+2. **Backend (Hugging Face Spaces - Docker)**: A Node.js Express server running inside a Docker container. Hugging Face provides 16 GB of RAM, which easily accommodates spawning the persistent Python subprocess daemon that loads and executes predictions on the YOLOv8 model (`rrp32.pt`).
 
-1. **Frontend**: React application bundled using Vite, styled with Tailwind CSS, and using Lucide icons.
-2. **Backend**: Express.js server exposing REST APIs. It uses Multer for managing temporary image uploads.
+Here is the data flow diagram:
+
+<div align="center">
+  <svg width="650" height="350" viewBox="0 0 650 350" fill="none" xmlns="http://www.w3.org/2000/svg" style="background:#0f172a; border-radius:12px; font-family:system-ui, -apple-system, sans-serif;">
+    <!-- Definitions for gradients and arrows -->
+    <defs>
+      <linearGradient id="grad-front" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#3b82f6" />
+        <stop offset="100%" stop-color="#1d4ed8" />
+      </linearGradient>
+      <linearGradient id="grad-back" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#10b981" />
+        <stop offset="100%" stop-color="#047857" />
+      </linearGradient>
+      <linearGradient id="grad-py" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#f59e0b" />
+        <stop offset="100%" stop-color="#b45309" />
+      </linearGradient>
+      <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#94a3b8" />
+      </marker>
+    </defs>
+
+    <!-- React Frontend Node -->
+    <rect x="30" y="110" width="160" height="80" rx="8" fill="url(#grad-front)" />
+    <text x="110" y="145" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">Vercel Frontend</text>
+    <text x="110" y="165" fill="#bfdbfe" font-size="11" text-anchor="middle">(React + Vite)</text>
+
+    <!-- Express Backend Node -->
+    <rect x="250" y="110" width="170" height="80" rx="8" fill="url(#grad-back)" />
+    <text x="335" y="145" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">Hugging Face Space</text>
+    <text x="335" y="165" fill="#a7f3d0" font-size="11" text-anchor="middle">(Express Backend)</text>
+
+    <!-- Python Subprocess Node -->
+    <rect x="470" y="110" width="150" height="80" rx="8" fill="url(#grad-py)" />
+    <text x="545" y="145" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">Python Process</text>
+    <text x="545" y="165" fill="#fde68a" font-size="11" text-anchor="middle">(inference.py / YOLO)</text>
+
+    <!-- Connection: Frontend to Backend (API) -->
+    <path d="M 190 135 L 250 135" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="220" y="125" fill="#94a3b8" font-size="10" text-anchor="middle" font-weight="600">POST /predict</text>
+
+    <path d="M 250 165 L 190 165" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="4" />
+    <text x="220" y="182" fill="#94a3b8" font-size="10" text-anchor="middle" font-weight="600">JSON response</text>
+
+    <!-- Connection: Express to Python (stdin/stdout) -->
+    <path d="M 420 135 L 470 135" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="445" y="125" fill="#94a3b8" font-size="9" text-anchor="middle" font-weight="600">stdin</text>
+
+    <path d="M 470 165 L 420 165" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="445" y="182" fill="#94a3b8" font-size="9" text-anchor="middle" font-weight="600">stdout</text>
+
+    <!-- Description Label at the bottom -->
+    <rect x="30" y="240" width="590" height="70" rx="6" fill="#1e293b" stroke="#334155" />
+    <text x="50" y="265" fill="#e2e8f0" font-size="12" font-weight="bold">Configuration: VITE_API_BASE</text>
+    <text x="50" y="285" fill="#94a3b8" font-size="11">The React frontend uses the VITE_API_BASE environment variable pointing to the Hugging Face Space</text>
+    <text x="50" y="300" fill="#94a3b8" font-size="11">endpoint (https://&lt;your-username&gt;-&lt;your-space-name&gt;.hf.space/api) to dispatch predict requests.</text>
+  </svg>
+</div>
+
+1. **Frontend**: React application bundled using Vite, styled with Tailwind CSS, and hosted on **Vercel**.
+2. **Backend**: Express.js server hosted on **Hugging Face Spaces** inside a Docker container. It uses Multer for managing temporary image uploads.
 3. **Inference Bridge**: The backend spawns a persistent Python process running `inference.py` when it starts up.
+
    - When a prediction request is received, the backend writes the temporary file path to the Python process's `stdin`.
    - The Python script (which loaded `rrp32.pt` once during startup) reads the path, runs the detection, encodes the annotated image to Base64, and prints the result as JSON on `stdout`.
    - The backend reads `stdout`, parses the JSON, deletes the temporary upload file, and returns the payload to the frontend.
