@@ -1,6 +1,13 @@
 # Object Detection under Adverse Weather Conditions
 
+> [!NOTE]
+> **Production Deployment Setup:**
+> * **Frontend**: Deployed on **Vercel**
+> * **Backend & YOLO Model**: Deployed on **Hugging Face Spaces** via a custom Docker container (bypassing free-tier memory limit issues like Render's 512 MB cap).
+> * **Deployment Guide**: See [DEPLOY_HUGGINGFACE.md](file:///c:/Users/DELL/OneDrive/Desktop/project2/DEPLOY_HUGGINGFACE.md) for step-by-step instructions.
+
 A minimal, modern, and professional web application designed to run object detection (e.g., vehicles, pedestrians, traffic signs) under adverse weather conditions (fog, rain, snow, low-light) using a custom YOLO model (`rrp32.pt`).
+
 
 The system uses a persistent Python subprocess architecture to execute inference on demand. By loading the model once upon server initialization, the Express.js server bypasses the model-loading overhead (1-3 seconds) on subsequent requests, yielding real-time latency.
 
