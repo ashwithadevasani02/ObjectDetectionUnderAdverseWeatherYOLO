@@ -306,3 +306,19 @@ Evaluated on a Tesla T4 GPU:
 - **Model is loading loop**: If you see a warning that the model is still loading, wait a few seconds. The persistent Python script takes around ~4-6 seconds to compile PyTorch, OpenCV, and load the 20MB `.pt` file.
 - **Port Conflict**: If port `4000` is already in use, you can configure a different port by editing `PORT` inside the [backend .env](file:///c:/Users/DELL/OneDrive/Desktop/project2/backend/.env) configuration file.
 - **Python Path Problems**: If the application fails to start because it cannot find the `python` command, make sure Python is added to your environment `PATH` or define the `PYTHON_PATH` variable inside the backend environment setup.
+
+---
+
+## Production Deployment on Hugging Face Spaces & Vercel
+
+To host this application in production, we split the architecture due to resource limits on standard free tiers (such as Render's 512 MB memory limit, which is too small to run Python's PyTorch, OpenCV, and the YOLO model):
+
+1. **Frontend Hosting (Vercel)**:
+   * The React + Vite frontend is deployed on **Vercel** for lightning-fast static content delivery.
+   * Configure Vercel with the environment variable `VITE_API_BASE` pointing to your Hugging Face Space backend (e.g., `https://<your-username>-<your-space-name>.hf.space/api`).
+
+2. **Backend Hosting (Hugging Face Spaces - Docker)**:
+   * The Express.js backend and local Python inference script are containerized using Docker and deployed to **Hugging Face Spaces**.
+   * Hugging Face provides **16 GB of RAM** on their free tier, allowing the Node server and the Python YOLO daemon to run smoothly in a single container.
+   * See [DEPLOY_HUGGINGFACE.md](file:///c:/Users/DELL/OneDrive/Desktop/project2/DEPLOY_HUGGINGFACE.md) for step-by-step deployment instructions.
+
